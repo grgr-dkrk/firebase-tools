@@ -322,6 +322,25 @@ function findExportMetadata(importPath: string): ExportMetadata | undefined {
   }
 }
 
+export function determineTargetConfig(
+  emulatorName: Emulators,
+  options: Options
+): { [key: string]: any } | undefined {
+  const emulatorConfig: { [key: string]: any }[] | { [key: string]: any } =
+    options.config.get(emulatorName);
+  if (!Array.isArray(emulatorConfig)) {
+    return emulatorConfig;
+  }
+  const onlyOptions = options.only;
+  const onlyTarget = onlyOptions?.split(",").filter((o) => {
+    const splitStr = o.split(":");
+    return splitStr[0] === emulatorName;
+  });
+  const target = onlyTarget?.length ? onlyTarget[0].split(":")[1] : "default";
+
+  return emulatorConfig.filter((config) => config.target === target)?.[0];
+}
+
 interface EmulatorOptions extends Options {
   extDevEnv?: Record<string, string>;
 }
@@ -685,7 +704,7 @@ export async function startAll(options: EmulatorOptions, showUI: boolean = true)
 
   if (shouldStart(options, Emulators.STORAGE)) {
     const storageAddr = await getAndCheckAddress(Emulators.STORAGE, options);
-    const storageConfig = options.config.data.storage;
+    const storageConfig = determineTargetConfig(Emulators.STORAGE, options);
 
     if (!storageConfig?.rules) {
       throw new FirebaseError(
